@@ -2,35 +2,48 @@
 
 namespace SMTPOrders
 {
-    public abstract class Retry
+    public class WebTimeoutRetry
     {
+        public WebTimeoutRetry(int numberOfRetries)
+        {
+            NumberOfRetries = numberOfRetries;
+        }
+
         public int NumberOfRetries { get; set; }
 
         public void ExecuteAction(Action action)
         {
             int currentRetry = 0;
 
-            for (int i=0;i<10;i++)
+            for (; ; )
             {
                 try
                 {
                     action();
-                   throw new TimeoutException("El servicio tarda demasiado, lo intentaremos hasta 5 veces, este es el intento número " + (currentRetry + 1).ToString());
+
+                    //lanzamos una excepción para simular que se ha agotado el tiempo de la solicitud
+                    throw new TimeoutException();
                 }
                 catch (Exception ex)
-                {
-                    System.Console.WriteLine(ex.ToString());    
+                {                    
                     currentRetry++;
+                    
+                    if (ex is TimeoutException)
+                        Console.WriteLine("El envío de correo está tardando. Este es el intento número " + (currentRetry).ToString());
 
-                    //if (currentRetry > NumberOfRetries || !IsTemporaryException(ex))
-                    if (currentRetry > 4)
-                        throw new TimeoutException("El servicio tarda demasiado, se ha cancelado"); 
+                    
+                    if (currentRetry >= NumberOfRetries)
+                    {
+                        Console.WriteLine("El servicio tarda demasiado, se ha cancelado");
+                        Console.WriteLine(ex.ToString());
+                        throw;
+                    }
+                        
                 }
                 
                 
             }
         }
 
-        public abstract bool IsTemporaryException(Exception ex);
     }
 }
